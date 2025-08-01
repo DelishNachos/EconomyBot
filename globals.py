@@ -1,0 +1,1 @@
+global_bot = None
