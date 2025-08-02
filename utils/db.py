@@ -205,6 +205,10 @@ def get_random_public_horses(count=3, exclude_ids=None):
     exclude_ids = exclude_ids or set()
     horses = load_all_horses()
     public_horses = [h for h in horses if h.get("public") and h["id"] not in exclude_ids]
+    
+    for horse in public_horses:
+        race_horse_manager.regenerate_energy(horse)
+
     return random.sample(public_horses, min(count, len(public_horses)))
 
 def update_horse(horse):
@@ -220,7 +224,7 @@ def update_horse(horse):
         json.dump(data, f, indent=2)
 
     horse_owner = horse.get('owner')
-    if horse_owner and horse_owner.lower() != 'house':
+    if horse_owner and horse_owner != 'house':
         update_saved_income(horse_owner)
     
 def get_user_horses(user_id):

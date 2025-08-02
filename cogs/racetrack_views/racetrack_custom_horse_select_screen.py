@@ -33,7 +33,7 @@ class HorseDropdown(discord.ui.Select):
         selected_horse_ids = {
             horse["id"]
             for key, horse in custom_race_info.items()
-            if key != custom_horse_id and horse is not None
+            if key != custom_horse_id and isinstance(horse, dict) and "id" in horse
         }
 
         options = []

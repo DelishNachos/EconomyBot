@@ -12,7 +12,7 @@ from utils.track_generator import get_current_track_point
 from utils.image_generator import generate_race_gif
 from utils.odds_calculator import calculate_odds_by_simulation
 
-betting_time = 10
+betting_time = 30
 
 num_of_track_points = 50
 winner_delay = 1
