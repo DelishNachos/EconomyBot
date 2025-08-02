@@ -24,7 +24,7 @@ class StaminaTrainingView(discord.ui.View):
         self.user_id = user_id
         self.horse = horse
 
-        can_buy = db.get_balance(user_id) >= training_calculator.calculate_cost(horse['speed'])
+        can_buy = db.get_balance(user_id) >= training_calculator.calculate_cost(horse['stamina'])
 
         self.add_item(StartButton(horse, can_buy))
         self.add_item(BackButton(horse))
