@@ -230,7 +230,7 @@ def get_user_public_horses(user_id):
     return [horse for horse in get_user_horses(user_id) if horse and horse.get("public", False)]
 
 def add_horse(user_id, horse, to_daily):
-    horse['owner'] = user_id
+    horse['owner'] = str(user_id)
     with open(HORSE_DATA_PATH, "r") as f:
         data = json.load(f)
     key = "daily_horses" if to_daily else "horses"
