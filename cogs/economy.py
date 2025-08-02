@@ -26,7 +26,7 @@ class Economy(commands.Cog):
         last_claimed_str = user.get("last_daily")
 
         if last_claimed_str:
-            last_claimed = datetime.strptime(last_claimed_str, "%Y-%m-%dT%H:%M:%S")
+            last_claimed = datetime.fromisoformat(last_claimed_str)
             next_claim_time = last_claimed + timedelta(days=1)
 
             if now < next_claim_time:
