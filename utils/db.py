@@ -197,8 +197,7 @@ def get_horse_by_id(horse_id):
     horses = load_all_horses()
     for horse in horses:
         if horse["id"] == horse_id:
-            if horse.get("last_energy_update"):
-                race_horse_manager.regenerate_energy(horse)
+            race_horse_manager.regenerate_energy(horse)
             return horse
     return None
 

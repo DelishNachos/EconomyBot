@@ -17,7 +17,7 @@ def get_horse_by_id(horse_id):
 
 def regenerate_energy(horse):
     ENERGY_REGEN_PER_HOUR = db.get_general_config()['energy_per_hour']
-    now = datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.timezone.utc)
 
     # If last_energy_update is None or missing, initialize it to now
     if not horse.get("last_energy_update"):
