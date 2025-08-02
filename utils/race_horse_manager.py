@@ -27,7 +27,7 @@ def regenerate_energy(horse):
         db.update_horse(horse)
         return
 
-    last_update = datetime.fromisoformat(horse["last_energy_update"])
+    last_update = datetime.datetime.fromisoformat(horse["last_energy_update"])
     elapsed = now - last_update
     hours_passed = elapsed.total_seconds() / 3600
     regenerated = int(hours_passed * ENERGY_REGEN_PER_HOUR)
