@@ -41,7 +41,7 @@ class Economy(commands.Cog):
                 return
 
         # Give reward
-        user["last_daily"] = now.strftime("%Y-%m-%dT%H:%M:%S")
+        user["last_daily"] = now.isoformat()
         db.update_user(user)
         db.update_balance(user_id, daily_amount)
 
