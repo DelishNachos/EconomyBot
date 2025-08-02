@@ -7,7 +7,7 @@ class BackButton(discord.ui.Button):
         super().__init__(label="Back", style=discord.ButtonStyle.secondary)
 
     async def callback(self, interaction: discord.Interaction):
-        response = stable_view_factory.main_stable_screen(interaction.user.id)
+        response = stable_view_factory.stables_manage_screen(interaction.user.id)
         await interaction.response.edit_message(
             content=response["content"],
             embed=response["embed"],
@@ -19,7 +19,7 @@ class UpgradeScreenView(discord.ui.View):
         super().__init__(timeout=300)
         self.user_id = user_id
 
-        next_level_data = db.get_stable_level_data(db.get_stable_data(user_id)['level'] + 1)
+        next_level_data = db.get_stable_level_data(db.get_user_stable_data(user_id)['level'] + 1)
         can_buy = db.get_balance(user_id) >= next_level_data['cost']
 
         self.add_item(UpgradeButton(can_buy))

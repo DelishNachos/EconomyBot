@@ -1,3 +1,4 @@
+import datetime
 import glob
 import os
 import json
@@ -5,7 +6,7 @@ from pathlib import Path
 import random
 from PIL import Image
 
-from utils import horse_generator
+from utils import horse_generator, race_horse_manager
 from utils.horse_generator import generate_daily_horses
 
 # Current file's directory
@@ -91,6 +92,67 @@ def update_user(user_data):
     with open(LOCAL_DB_PATH, "w") as f:
         json.dump(users, f, indent=2)
 
+def calculate_per_hour_income(user_id):
+    horses = get_user_horses(user_id)
+    stable_data = get_user_stable_data(user_id)
+    stable_level_data = get_stable_level_data(stable_data['level'])
+
+    total_horse_income = calculate_total_horse_income(user_id)
+
+    money_for_stable = stable_level_data['passive_income']
+
+    total_money_per_hour = total_horse_income + money_for_stable
+    return total_money_per_hour
+
+def calculate_total_horse_income(user_id):
+    horses = get_user_horses(user_id)
+    return sum(calculate_income_of_horse(h) for h in horses)
+
+def update_saved_income(user_id):
+    user  = get_user(user_id)
+    now = datetime.datetime.now(datetime.timezone.utc)
+     # Parse the timestamps if they exist
+    last_updated_time = (
+        datetime.datetime.fromisoformat(user['last_income']) if user['last_income'] else now
+    )
+    last_claimed_time = (
+        datetime.datetime.fromisoformat(user['last_claimed']) if user['last_claimed'] else now
+    )
+
+    max_earn_time = min(now, last_claimed_time + datetime.timedelta(hours=24))
+    capped_delta = (max_earn_time - last_updated_time).total_seconds() / 3600
+
+    if capped_delta > 0:
+        income = calculate_per_hour_income(user_id) * capped_delta
+        user['saved_income'] += int(income)
+        user['last_income'] = now.isoformat()
+
+    update_user(user)
+
+def reset_saved_income(user_id):
+    user = get_user(user_id)
+    user['saved_income'] = 0
+    update_user(user)
+
+def claim_income(user_id):
+    update_saved_income(user_id)
+
+    user = get_user(user_id)
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    income_to_claim = user['saved_income']
+    user['last_claimed'] = now.isoformat()
+    update_user(user)
+    reset_saved_income(user_id)
+    update_balance(user_id, int(income_to_claim))
+    return income_to_claim
+
+def get_updated_saved_income(user_id):
+    update_saved_income(user_id)
+
+    user = get_user(user_id)
+    return user['saved_income']
+
 def empty_user_table_item(user_id):
     return {
         "user_id": user_id,
@@ -105,8 +167,13 @@ def empty_user_table_item(user_id):
 
         ],
         "data_cached": False,
-        "last_daily": None
+        "last_daily": None,
+        "last_income": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "saved_income": 0,
+        "last_claimed": datetime.datetime.now(datetime.timezone.utc).isoformat()
     }
+
+
 
 
 
@@ -127,11 +194,12 @@ def load_daily_horses():
 
 def get_horse_by_id(horse_id):
     horse_id = str(horse_id)
-    with open(HORSE_DATA_PATH, "r") as f:
-        data = json.load(f)
-        for horse in data.get("horses", []) + data.get("daily_horses", []):
-            if horse["id"] == horse_id:
-                return horse
+    horses = load_all_horses()
+    for horse in horses:
+        if horse["id"] == horse_id:
+            if horse.get("last_energy_update"):
+                race_horse_manager.regenerate_energy(horse)
+            return horse
     return None
 
 def get_random_public_horses(count=3, exclude_ids=None):
@@ -152,12 +220,15 @@ def update_horse(horse):
     with open(HORSE_DATA_PATH, "w") as f:
         json.dump(data, f, indent=2)
 
+    horse_owner = horse.get('owner')
+    if horse_owner and horse_owner.lower() != 'house':
+        update_saved_income(horse_owner)
+    
 def get_user_horses(user_id):
     return [get_horse_by_id(hid) for hid in get_user(user_id).get("stables", {}).get("horses", [])]
 
 def get_user_public_horses(user_id):
     return [horse for horse in get_user_horses(user_id) if horse and horse.get("public", False)]
-
 
 def add_horse(user_id, horse, to_daily):
     horse['owner'] = user_id
@@ -175,6 +246,7 @@ def add_horse_to_user(user_id, horse):
         user["stables"]["horses"].append(horse_id)
         user['stables']['horse_count'] += 1
     update_user(user)
+    update_saved_income(user_id)
 
 def remove_horse_from_user(user_id, horse):
     horse_id = horse['id']
@@ -184,15 +256,27 @@ def remove_horse_from_user(user_id, horse):
         user["stables"]["horse_count"] -= 1
 
     update_user(user)
+    update_saved_income(user_id)
     
-
 def remove_daily_horse(horse_id):
-    with open(HORSE_DATA_PATH, "r") as f:
+    with open(DAILY_HORSE_DATA_PATH, "r") as f:
         data = json.load(f)
-    data["daily_horses"] = [h for h in data.get("daily_horses", []) if h["id"] != horse_id]
-    with open(HORSE_DATA_PATH, "w") as f:
-        json.dump(data, f, indent=2)
+    updated_data = [horse for horse in data if horse["id"] != horse_id]
+    with open(DAILY_HORSE_DATA_PATH, "w") as f:
+        json.dump(updated_data, f, indent=2)
 
+def refresh_daily_horses():
+    horses = horse_generator.generate_daily_horses()
+    with open(DAILY_HORSE_DATA_PATH, "w") as f:
+        json.dump(horses, f, indent=2)
+
+def calculate_income_of_horse(horse):
+    base_money = get_general_config()['money_per_horse']
+    money_per_25_stat = get_general_config()['money_per_25_stat']
+    total_stats = horse['speed'] + horse['stamina'] + horse['agility']
+    total_stat_pools = total_stats // 25
+    return base_money + (total_stat_pools * money_per_25_stat)
+    
 def buy_horse(user_id, horse):
     add_horse(user_id, horse, False)
     add_horse_to_user(user_id, horse)
@@ -226,7 +310,8 @@ def empty_horse_table_item(horse_id):
         "wins": 0,
         "races": 0,
         "energy": 100,
-        "public": False,
+        "public": True,
+        "last_energy_update": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "market_price": 0
     }
 
@@ -279,7 +364,7 @@ def get_track_tags_as_string(track):
 
 
 
-def get_stable_data(user_id):
+def get_user_stable_data(user_id):
     return get_user(user_id).get("stables")
 
 def get_stable_level_data(level):
@@ -296,14 +381,17 @@ def update_stable_data(user_id, stable_data):
         json.dump(data, f, indent=2)
 
 def upgrade_stable_data(user_id):
-    stable_data = get_stable_data(user_id)
-    stable_data['level'] += 1
-    update_stable_data(user_id, stable_data)
-    update_balance(user_id, -get_stable_level_data(stable_data['level'])['cost'])
+    user = get_user(user_id)
+    stored_level = user['stables']['level']
+    cost = get_stable_level_data(stored_level)['cost']
+    user['stables']['level'] += 1
+    update_user(user)
+    update_balance(user_id, -cost)
+    update_saved_income(user_id)
 
 def can_upgrade_stable(user_id):
     balance = get_balance(user_id)
-    stable_data = get_stable_data(user_id)
+    stable_data = get_user_stable_data(user_id)
     next_level_data = get_stable_level_data(stable_data['level'] + 1)
     return balance >= next_level_data['cost']
 

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import discord
 from discord.ext import commands
 import os
@@ -22,7 +22,7 @@ class Economy(commands.Cog):
         user_id = str(ctx.author.id)
         user = db.get_user(user_id)
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         last_claimed_str = user.get("last_daily")
 
         if last_claimed_str:
@@ -48,7 +48,7 @@ class Economy(commands.Cog):
         balance = db.get_balance(user_id)
         await ctx.respond(f"✅ You claimed ${daily_amount}! Your new balance is ${balance}.", ephemeral=True)
 
-    @discord.slash_command(name="send_money", description="Send money to another user.")
+    @discord.slash_command(name="send_money", description="Send money to another user")
     async def send_money(self, ctx: discord.ApplicationContext, user: discord.User):
         if user.id == ctx.user.id:
             await ctx.respond("❌ You can't send money to yourself.", ephemeral=True)

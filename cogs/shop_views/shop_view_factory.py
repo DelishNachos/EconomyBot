@@ -41,7 +41,7 @@ def shop_horses_screen(user_id):
     content = None
     embed = discord.Embed(
         title=f"Welcome to the Horse Shop",
-        description="Buy new horses here. Horses refresh every 24 hours",
+        description="Buy new horses here. Horses refresh every 6 hours",
         color=discord.Color.green()
     )
     embed.set_author(name=f"💸 Balance: ${db.get_balance(user_id)}")

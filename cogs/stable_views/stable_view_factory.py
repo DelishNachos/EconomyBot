@@ -1,6 +1,7 @@
 import os
 import discord
 from cogs.stable_views.horse_confirm_retire_screen import ConfirmRetireView
+from cogs.stable_views.stable_manage_screen import StableManageView
 from cogs.stable_views.stables_main_screen import MainStableView
 from cogs.stable_views.horses_screen import HorsesScreenView
 from cogs.stable_views.stables_upgrade_screen import UpgradeScreenView
@@ -28,11 +29,14 @@ from utils import training_calculator
 
 
 def get_main_stable_view(user_id):
-    stable_data = db.get_stable_data(user_id)
+    stable_data = db.get_user_stable_data(user_id)
     return MainStableView(user_id, stable_data)
 
 def get_horses_view(user_id):
     return HorsesScreenView(user_id)
+
+def get_stables_manage_view(user_id):
+    return StableManageView(user_id)
 
 def get_stables_upgrade_view(user_id):
     return UpgradeScreenView(user_id)
@@ -97,7 +101,7 @@ def get_confirm_retire_view(user_id, horse):
 
 
 def main_stable_screen(user_id):
-    stable_data = db.get_stable_data(user_id)
+    stable_data = db.get_user_stable_data(user_id)
     stable_level_data = db.get_stable_level_data(stable_data['level'])
 
     content = None#f"🏠 **{stable_data['name']}**\nHorses: {stable_data['horse_count']}/{stable_level_data['max_horses']}"
@@ -107,7 +111,9 @@ def main_stable_screen(user_id):
         color=discord.Color.gold()
     )
     embed.set_author(name=f"💸 Balance: ${db.get_balance(user_id)}")
-    embed.add_field(name="Horses", value=f"{stable_data['horse_count']}/{stable_level_data['max_horses']}", inline=False)
+    embed.add_field(name="Horses", value=f"{stable_data['horse_count']}/{stable_level_data['max_horses']}", inline=True)
+    embed.add_field(name="Stable Income", value=f"${stable_level_data['passive_income']}/hr")
+    embed.add_field(name="Horse Income", value=f"${int(db.calculate_total_horse_income(user_id))}/hr")
     #embed.add_field(name="Current Stable Level", value=stable_data['level'], inline = False)
     embed.set_footer(text=f"Stable Level: {stable_data['level']}")
     view = get_main_stable_view(user_id)
@@ -118,20 +124,44 @@ def main_stable_screen(user_id):
         "view": view
     }
 
+def stables_manage_screen(user_id):
+    stable_data = db.get_user_stable_data(user_id)
+    stable_level_data = db.get_stable_level_data(stable_data['level'])
+
+    content = None#f"🏠 **{stable_data['name']}**\nHorses: {stable_data['horse_count']}/{stable_level_data['max_horses']}"
+    embed = discord.Embed(
+        title=f"🏠 {stable_data['name']}",
+        description="Manage your horses and upgrade your stables.",
+        color=discord.Color.gold()
+    )
+    embed.set_author(name=f"💸 Balance: ${db.get_balance(user_id)}")
+    embed.add_field(name="Horses", value=f"{stable_data['horse_count']}/{stable_level_data['max_horses']}", inline=True)
+    embed.add_field(name="Stable Income", value=f"${stable_level_data['passive_income']}/hr")
+    embed.add_field(name="Horse Income", value=f"${int(db.calculate_total_horse_income(user_id))}/hr")
+    #embed.add_field(name="Current Stable Level", value=stable_data['level'], inline = False)
+    embed.set_footer(text=f"Stable Level: {stable_data['level']}")
+    view = get_stables_manage_view(user_id)
+
+    return {
+            "content": content,
+            "embed": embed,
+            "view": view
+        }
+
 def stables_upgrade_screen(user_id):
-   stable_data = db.get_stable_data(user_id)
+   stable_data = db.get_user_stable_data(user_id)
    stable_level_data = db.get_stable_level_data(stable_data['level'])
    next_level_data = db.get_stable_level_data(stable_data['level'] + 1)
    content = None
    embed = discord.Embed(
-       title="Upgrade Stable",
-       description="Upgrade your stable to make room for more horses",
+       title=f"Upgrade Stable",
+       description="",
        color=discord.Color.gold()
    ) 
    embed.set_author(name=f"💸 Balance: ${db.get_balance(user_id)}")
-   embed.add_field(name=f"Current Level: {stable_data['level']}", value=f"**{stable_data['horse_count']}/{stable_level_data['max_horses']}** Horses", inline=False)
-   embed.add_field(name=f"Next Level: {stable_data['level'] + 1}", value=f"**+{next_level_data['max_horses'] - stable_level_data['max_horses']}** Max Horses", inline=True)
-   embed.add_field(name="Cost",value=f"**${next_level_data['cost']}**", inline=True)
+   embed.add_field(name=f"Horses", value=f"**{stable_data['horse_count']}/{stable_level_data['max_horses']}** --> **{stable_data['horse_count']}/{next_level_data['max_horses']}**", inline=False)
+   embed.add_field(name=f"Income", value=f"**${stable_level_data['passive_income']}/hr** --> **${next_level_data['passive_income']}/hr**", inline=False)
+   embed.add_field(name="Cost",value=f"**${next_level_data['cost']}**", inline=False)
    view = get_stables_upgrade_view(user_id)
 
    return {
@@ -141,6 +171,9 @@ def stables_upgrade_screen(user_id):
     }
 
 def horses_screen(user_id):
+    stable_data = db.get_user_stable_data(user_id)
+    stable_level_data = db.get_stable_level_data(stable_data['level'])
+
     content = ""
     embed = discord.Embed(
         title="Horse Menu",
@@ -148,6 +181,8 @@ def horses_screen(user_id):
         color=discord.Color.gold()
     )
     embed.set_author(name=f"💸 Balance: ${db.get_balance(user_id)}")
+    embed.add_field(name="Horses", value=f"{stable_data['horse_count']}/{stable_level_data['max_horses']}", inline=True)
+    embed.add_field(name="Horse Income", value=f"${int(db.calculate_total_horse_income(user_id))}/hr")
     view = get_horses_view(user_id)
 
     return {
@@ -187,12 +222,14 @@ def horse_list_screen(user_id):
         wins = horse.get("wins", 0)
         races = horse.get("races", 0)
         public = horse.get("public", False)
+        income = db.calculate_income_of_horse(horse)
 
         stats_text = (
             f"**Stats:** Speed: {speed}, Stamina: {stamina}, Agility: {agility}\n"
             f"**Energy:** {energy}\n"
             f"🏆 Wins: {wins} | 🐎 Races: {races}\n"
             f"**Public:** {public}"
+            f"**Income** ${income}/hr"
             "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
         embed.add_field(name=name, value=stats_text, inline=False)
@@ -213,6 +250,8 @@ def horse_select_screen(user_id):
     }
 
 def horse_manage_screen(user_id, horse):
+    refreshed_horse = db.get_horse_by_id(horse['id'])
+    horse = refreshed_horse
 
     content = ""
     embed = discord.Embed(
@@ -238,6 +277,8 @@ def horse_manage_screen(user_id, horse):
     embed.add_field(name="Wins", value=horse["wins"])
     embed.add_field(name="Races", value=horse['races'])
     embed.add_field(name="Energy", value=f"{horse['energy']}%")
+    embed.add_field(name="Income", value=f"${db.calculate_income_of_horse(horse)}/hr")
+    embed.set_footer(text="Public horses can be selected in all custom and random races (your horse will **not** lose energy when selected)")
 
     return {
         "content": content,
@@ -247,6 +288,9 @@ def horse_manage_screen(user_id, horse):
     }
 
 def horse_customize_screen(user_id, horse):
+    refreshed_horse = db.get_horse_by_id(horse['id'])
+    horse = refreshed_horse
+
     content = ""
     embed = discord.Embed(
         title=f"Customizing {horse['name']}",
@@ -273,6 +317,9 @@ def horse_customize_screen(user_id, horse):
     }
 
 def horse_training_screen(user_id, horse):
+    refreshed_horse = db.get_horse_by_id(horse['id'])
+    horse = refreshed_horse
+
     content = ""
     embed = discord.Embed(
         title=f"Training {horse['name']}",
@@ -304,6 +351,9 @@ def horse_training_screen(user_id, horse):
     }
 
 def speed_training_screen(user_id, horse):
+    refreshed_horse = db.get_horse_by_id(horse['id'])
+    horse = refreshed_horse
+
     content = ""
     embed = discord.Embed(
         title=f"Speed Training",
@@ -338,7 +388,8 @@ def speed_training_screen(user_id, horse):
     }
 
 async def speed_game_screen(interaction: discord.Interaction, user_id, horse):
-    
+    refreshed_horse = db.get_horse_by_id(horse['id'])
+    horse = refreshed_horse
     
     async def on_game_complete(taps, interaction):
         points = training_calculator.calculate_speed_gain(horse["speed"], taps)
@@ -405,6 +456,9 @@ async def speed_game_screen(interaction: discord.Interaction, user_id, horse):
     }
 
 def stamina_training_screen(user_id, horse):
+    refreshed_horse = db.get_horse_by_id(horse['id'])
+    horse = refreshed_horse
+    
     content = ""
     embed = discord.Embed(
         title=f"Stamina Training",
@@ -439,6 +493,9 @@ def stamina_training_screen(user_id, horse):
     }
 
 async def stamina_game_screen(interaction: discord.Interaction, user_id, horse):
+    refreshed_horse = db.get_horse_by_id(horse['id'])
+    horse = refreshed_horse
+    
     target_time = 3.0  # Ideal hold time in seconds
 
     async def on_game_complete(hold_time, interaction):
@@ -494,6 +551,9 @@ async def stamina_game_screen(interaction: discord.Interaction, user_id, horse):
     }
 
 def agility_training_screen(user_id, horse):
+    refreshed_horse = db.get_horse_by_id(horse['id'])
+    horse = refreshed_horse
+    
     content = ""
     embed = discord.Embed(
         title=f"Agility Training",
@@ -528,6 +588,9 @@ def agility_training_screen(user_id, horse):
     }
 
 async def agility_game_screen(interaction: discord.Interaction, user_id, horse):
+    refreshed_horse = db.get_horse_by_id(horse['id'])
+    horse = refreshed_horse
+   
     async def on_game_complete(success, reaction_time, interaction):
         points = training_calculator.calculate_agility_gain(horse["agility"], reaction_time)
         cost = training_calculator.calculate_cost(horse["agility"])
@@ -639,6 +702,9 @@ def inventory_type_screen(user_id, item_type):
     }
 
 def item_select_screen(user_id, horse):
+    refreshed_horse = db.get_horse_by_id(horse['id'])
+    horse = refreshed_horse
+
     items = db.get_user_items(user_id)
 
     return {
@@ -648,6 +714,8 @@ def item_select_screen(user_id, horse):
     }
 
 def item_give_screen(user_id, horse, item):
+    refreshed_horse = db.get_horse_by_id(horse['id'])
+    horse = refreshed_horse
     # updates horse
     horse_id = horse['id']
     horse = db.get_horse_by_id(horse_id)
@@ -683,6 +751,8 @@ def item_give_screen(user_id, horse, item):
     }
 
 def horse_retire_confirm_screen(user_id, horse):
+    refreshed_horse = db.get_horse_by_id(horse['id'])
+    horse = refreshed_horse
     content = None
     embed = discord.Embed(
         title=f"Are you sure you want to retire this horse?",

@@ -6,8 +6,6 @@ import uuid
 from utils import db
 from utils.track_generator import get_current_track_point
 
-AVG_STEPS = 189
-AVG_PRICE = 1000
 
 BOT_DIR = Path(__file__).resolve().parent.parent
 DATA_PATH = BOT_DIR.parent / "HorseRacingBotData" / "Data"
@@ -16,6 +14,8 @@ TRACK_ID = "oval_horse_track"
 CONFIG_PATH = DATA_PATH / "horse_racing_config.json"
 
 def generate_biased_horse(caliber="H5", track_type="balanced"):
+    AVG_PRICE = db.get_general_config()['average_horse_price']
+    AVG_STEPS = db.get_general_config()['average_horse_steps']
     CALIBER_INFO = db.get_horse_racing_caliber_info()
     TRACK_BIASES = db.get_horse_racing_bias_settings()
     horse = db.empty_horse_table_item(str(uuid.uuid4()))
@@ -59,7 +59,6 @@ def generate_biased_horse(caliber="H5", track_type="balanced"):
     horse["agility"] = stats[2]
     horse["energy"] = random.randint(min_energy, max_energy)
 
-    print("Calculating price")
     # === Calculate price using benchmark track ===
     track = db.get_track_by_id(TRACK_ID)
     track_data = json.load(open(f'{DATA_PATH}/tracks/{TRACK_ID}.json'))
@@ -77,6 +76,9 @@ def generate_biased_horse(caliber="H5", track_type="balanced"):
     return horse
 
 def generate_random_horse(min_total=130, max_total=170):
+    AVG_PRICE = db.get_general_config()['average_horse_price']
+    AVG_STEPS = db.get_general_config()['average_horse_steps']
+    
     total = random.randint(min_total, max_total)
 
     # Widened weight range allows much greater variation

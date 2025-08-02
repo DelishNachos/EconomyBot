@@ -9,7 +9,7 @@ class MainStableView(discord.ui.View):
 
         self.add_item(HorsesButton())
         self.add_item(InventoryButton())
-        self.add_item(UpgradeButton())
+        self.add_item(ManageStableButton())
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
@@ -38,12 +38,12 @@ class InventoryButton(discord.ui.Button):
             view=response["view"]
         )
 
-class UpgradeButton(discord.ui.Button):
+class ManageStableButton(discord.ui.Button):
     def __init__(self):
-        super().__init__(label="Upgrade Stable", style=discord.ButtonStyle.success)
+        super().__init__(label="Manage Stable", style=discord.ButtonStyle.primary)
 
     async def callback(self, interaction: discord.Interaction):
-        response = stable_view_factory.stables_upgrade_screen(interaction.user.id)
+        response = stable_view_factory.stables_manage_screen(interaction.user.id)
         await interaction.response.edit_message(
             content=response["content"],
             embed=response["embed"],

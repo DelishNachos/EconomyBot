@@ -287,9 +287,9 @@ class HorseRacing(commands.Cog):
             if horse['id'] == winning_horse_id:
                 horse['wins'] += 1
 
-            if not horse['id'] == 'house':
-                new_energy = horse['energy'] - energy_loss
-                horse['energy'] = max(0, new_energy)
+            # if not horse['id'] == 'house':
+            #     new_energy = horse['energy'] - energy_loss
+            #     horse['energy'] = max(0, new_energy)
             
             update_horse(horse)
 
