@@ -289,7 +289,7 @@ class HorseRacing(commands.Cog):
                 horse['wins'] += 1
                 if horse['owner'] and not horse['owner'] == "house":
                     owner_id = horse['owner']
-                    user_bet = self.view.bets.get(user_id, {"horse_id": None, "amount": 0})
+                    user_bet = bets.get(user_id, {"horse_id": None, "amount": 0})
                     total_bet_amount -= user_bet['amount']
                     amount = int(total_bet_amount * db.get_general_config()['user_horse_winning_multiplier'])
                     db.add_money_to_user_saved(owner_id, amount)
