@@ -18,6 +18,7 @@ num_of_track_points = 50
 winner_delay = 1
 max_stat = 150
 max_stat_norm = max_stat / 10
+race_energy_loss_per_tick = 10  # base energy loss per tick
 
 energy_loss = 10
 
@@ -123,6 +124,7 @@ class HorseRacing(commands.Cog):
 
         # Simulate entire race upfront
         positions = {h["id"]: 0 for h in horses}
+        race_energy = {h["id"]: 100 for h in horses}  # start full energy
         positions_frames = []
 
         # Add randomness to house managed horses
@@ -130,62 +132,101 @@ class HorseRacing(commands.Cog):
             if horse['owner'] == "house":
                 horse['energy'] = random.randint(50, 100)
 
+         # Precompute energy multipliers
         energy_multipliers = {}
-        for horse in horses:
-            energy = horse['energy'] / 100  # Normalize to 0–1
-            # Avoid math domain error by clamping very small energy values
-            energy = max(energy, 0.001)
+        for h in horses:
+            energy = h['energy'] / 100  # Normalize to 0–1
+            energy = max(energy, 0.001)  # clamp low values
             multiplier = 1 + math.log(energy + 0.01) * 0.1
-            multiplier = max(0, multiplier)  # Clamp to non-negative if needed
-            energy_multipliers[horse["id"]] = multiplier
+            energy_multipliers[h["id"]] = max(0, multiplier)
 
 
         while max(positions.values()) < track_length:
-            for horse in horses:
-                horse_id = horse["id"]
+            for h in horses:
+                horse_id = h["id"]
                 progress = positions[horse_id]
                 percentage_progress = progress / track_length
 
                 path_index = get_current_track_point([tuple(p) for p in track_data[0]], percentage_progress)
                 on_corner = path_index in corner_indices
-                
 
-                # Base weights
-                speed_weight = 1.5
+                # Base stat weights, different on corners
+                speed_weight = 2.0
                 stamina_weight = 1.2
-                agility_weight = 1.0
-
+                agility_weight = .8
                 if on_corner:
-                    agility_weight = 3.0
+                    agility_weight = 1.8
+                    speed_weight = 1.5
+                    stamina_weight = 1.2
 
+                # Normalize stats (0-150 to ~0-15)
+                norm_speed = h["speed"] / max_stat_norm
+                norm_stamina = h["stamina"] / max_stat_norm
+                norm_agility = h["agility"] / max_stat_norm
 
-                # Normalize stats (0–100 input → 0–10 scale)
-                norm_speed = horse["speed"] / max_stat_norm
-                norm_stamina = horse["stamina"] / max_stat_norm
-                norm_agility = horse["agility"] / max_stat_norm
-                
-                # Fatigue factor: increases as the horse approaches the end of the race
-                fatigue_percent = progress / 60  # e.g. 0.8 = 80% through the race
-                fatigue_penalty = fatigue_percent * (1 - norm_stamina / max_stat_norm)  # Higher stamina means lower penalty
+                # Fatigue penalty (more fatigue with less stamina)
+                fatigue_percent = progress / 60
+                fatigue_penalty = fatigue_percent * (1 - norm_stamina / max_stat_norm)
 
-                # Apply fatigue and energy penalty to effective speed
+                # Effective speed after fatigue
                 effective_speed = norm_speed * (1 - 0.3 * fatigue_penalty)
-                
 
+                # Calculate base chance to move this tick
                 chance = (
                     (effective_speed * speed_weight) +
                     (norm_stamina * stamina_weight) +
                     (norm_agility * agility_weight)
                 ) / 30
 
-                # Apply energy penalty
-                chance *= energy_multipliers[horse["id"]]
+                # Apply permanent energy multiplier
+                chance *= energy_multipliers[horse_id]
 
+                # Apply randomness to chance for natural variation
+                chance *= random.uniform(0.9, 1.1)
+                chance = min(chance, 0.95)  # cap max chance
+
+                # Reduce race energy every tick based on stamina (higher stamina = less loss)
+                energy_loss = race_energy_loss_per_tick * (1 - (h["stamina"] / max_stat))
+                race_energy[horse_id] = max(0, race_energy[horse_id] - energy_loss)
+
+                # === BURST MECHANIC ===
+                burst_steps = 1  # default move 1 step
+
+                # Randomize burst chance based on stamina with some variation
+                base_burst_chance = 0.05 + (h["stamina"] / max_stat) * 0.2
+                burst_chance = random.uniform(base_burst_chance * 0.7, base_burst_chance * 1.3)
+                burst_chance = min(burst_chance, 0.3)
+
+                if race_energy[horse_id] > 10 and random.random() < burst_chance:
+                    max_burst = 1 + int((h["agility"] / max_stat) * 2)  # max 3 steps burst
+                    # Weighted random burst steps: mostly small bursts, less big
+                    burst_steps = random.choices(
+                        population=[1, 2, 3],
+                        weights=[0.7, 0.2, 0.1],
+                        k=1
+                    )[0]
+                    burst_steps = min(burst_steps, max_burst)
+
+                    # Variable energy cost per burst step
+                    energy_cost = (burst_steps - 1) * random.randint(4, 6)
+
+                    # Reduce burst steps if not enough energy
+                    while burst_steps > 1 and race_energy[horse_id] < energy_cost:
+                        burst_steps -= 1
+                        energy_cost = (burst_steps - 1) * random.randint(4, 6)
+
+                    # Deduct energy if burst
+                    if burst_steps > 1:
+                        race_energy[horse_id] -= energy_cost
+
+                # Final movement roll
                 if random.random() < chance:
-                    positions[horse_id] += 1
+                    positions[horse_id] += burst_steps
 
             positions_frames.append(positions.copy())
 
+
+        # Find winner
         winning_horse_id = max(positions, key=positions.get)
 
         # Generate race GIF
