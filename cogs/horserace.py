@@ -102,10 +102,9 @@ class HorseRacing(commands.Cog):
     @discord.slash_command(name="randomrace", description="Start a new horse race with random horses", guild_ids=[int(os.getenv("DISCORD_GUILD_ID"))])
     async def startrace(
         self,
-        ctx,
-        public: bool = discord.Option(default=False, description="Should this race be public?")
+        ctx
     ):
-        is_ephemeral = not public
+        is_ephemeral = False
         
         if self.race_in_progress:
             await ctx.respond("🚫 A race is already in progress!", ephemeral=True)
