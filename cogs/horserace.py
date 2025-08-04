@@ -264,9 +264,11 @@ class HorseRacing(commands.Cog):
         if not bets:
             results.append("⏹️ No one placed a bet.")
 
+        total_bet_amount = 0
         for user_id, bet in bets.items():
             horse_id = bet["horse_id"]
             amount = bet["amount"]
+            total_bet_amount += amount
             if horse_id == winning_horse_id:
                 payout = round(amount * odds[horse_id]["decimal_odds"])
                 update_balance(user_id, payout)
@@ -286,6 +288,10 @@ class HorseRacing(commands.Cog):
 
             if horse['id'] == winning_horse_id:
                 horse['wins'] += 1
+                if horse['owner'] and not horse['owner'] == "house":
+                    owner_id = horse['owner']
+                    amount = int(total_bet_amount * db.get_general_config()['user_horse_winning_multiplier'])
+                    db.add_money_to_user_saved(owner_id, amount)
 
             # if not horse['id'] == 'house':
             #     new_energy = horse['energy'] - energy_loss

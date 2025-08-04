@@ -129,6 +129,11 @@ def update_saved_income(user_id):
 
     update_user(user)
 
+def add_money_to_user_saved(user_id, amount):
+    user = get_user(user_id)
+    user['saved_income'] += amount
+    update_user(user)
+
 def reset_saved_income(user_id):
     user = get_user(user_id)
     user['saved_income'] = 0
