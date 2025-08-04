@@ -267,6 +267,7 @@ class HorseRacing(commands.Cog):
         for user_id, bet in bets.items():
             horse_id = bet["horse_id"]
             amount = bet["amount"]
+            update_balance(user_id, -amount)
             total_bet_amount += amount
             if horse_id == winning_horse_id:
                 payout = round(amount * odds[horse_id]["decimal_odds"])
@@ -274,7 +275,6 @@ class HorseRacing(commands.Cog):
                 results.append(f"<@{user_id}> won ${payout}! 🤑")
                 total_house_cut += round(amount * odds[horse_id]["house_payout"])
             else:
-                update_balance(user_id, -amount)
                 results.append(f"<@{user_id}> lost ${amount}. 💸")
                 total_house_cut += amount
 
@@ -289,6 +289,8 @@ class HorseRacing(commands.Cog):
                 horse['wins'] += 1
                 if horse['owner'] and not horse['owner'] == "house":
                     owner_id = horse['owner']
+                    user_bet = self.view.bets.get(user_id, {"horse_id": None, "amount": 0})
+                    total_bet_amount -= user_bet['amount']
                     amount = int(total_bet_amount * db.get_general_config()['user_horse_winning_multiplier'])
                     db.add_money_to_user_saved(owner_id, amount)
 
