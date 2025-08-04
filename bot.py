@@ -26,7 +26,7 @@ async def on_ready():
     await bot.sync_commands(guild_ids=[GUILD_ID])
 
 # Load all cogs
-for extension in ["cogs.economy", "cogs.horserace", "cogs.slots", "cogs.buy_horse", "cogs.stable_manager", "cogs.shop_manager", "cogs.racetrack_manager", "cogs.daily_horse_refresh", "cogs.bank_manager"]:
+for extension in ["cogs.economy", "cogs.horserace", "cogs.stable_manager", "cogs.shop_manager", "cogs.racetrack_manager", "cogs.daily_horse_refresh", "cogs.bank_manager"]:
     bot.load_extension(extension)
 
 bot.run(TOKEN)

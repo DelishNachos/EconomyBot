@@ -92,6 +92,24 @@ def update_user(user_data):
     with open(LOCAL_DB_PATH, "w") as f:
         json.dump(users, f, indent=2)
 
+def claim_daily(user_id):
+    user = get_user(user_id)
+    user['last_daily'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    update_user(user)
+    amount = get_general_config()['daily_amount']
+    update_balance(user_id, amount)
+    return amount
+
+def get_today_reset_time_utc():
+    now = datetime.now(datetime.timezone.utc)
+    reset_time = now.replace(hour=17, minute=0, second=0, microsecond=0)
+
+    # If current time is before today's reset time, adjust to yesterday's reset
+    if now < reset_time:
+        reset_time -= datetime.timedelta(days=1)
+    
+    return reset_time
+
 def calculate_per_hour_income(user_id):
     horses = get_user_horses(user_id)
     stable_data = get_user_stable_data(user_id)

@@ -17,36 +17,36 @@ class Economy(commands.Cog):
 
     @discord.slash_command(guild_ids=[int(os.getenv("DISCORD_GUILD_ID"))])
     async def daily(self, ctx):
-        daily_amount = db.get_general_config()['daily_amount']
-
         user_id = str(ctx.author.id)
         user = db.get_user(user_id)
-
-        now = datetime.now(timezone.utc)
         last_claimed_str = user.get("last_daily")
+        
+        now = datetime.now(timezone.utc)
+        reset_time = db.get_today_reset_time_utc()
 
         if last_claimed_str:
+            # Parse the stored ISO 8601 datetime string
             last_claimed = datetime.fromisoformat(last_claimed_str)
-            next_claim_time = last_claimed + timedelta(days=1)
-
-            if now < next_claim_time:
-                time_remaining = next_claim_time - now
-                hours, remainder = divmod(int(time_remaining.total_seconds()), 3600)
-                minutes, seconds = divmod(remainder, 60)
+            
+            # If the parsed datetime is naive, assume it's UTC
+            if last_claimed.tzinfo is None:
+                last_claimed = last_claimed.replace(tzinfo=timezone.utc)
+            
+            # If the user's last claim was at or after the most recent reset time, they cannot claim again
+            if last_claimed >= reset_time:
                 await ctx.respond(
                     f"⏳ You’ve already claimed your daily reward today!\n"
-                    f"Come back in **{hours}h {minutes}m {seconds}s**.",
+                    f"The daily reward resets at 10AM MST",
                     ephemeral=True
                 )
                 return
 
-        # Give reward
-        user["last_daily"] = now.isoformat()
-        db.update_user(user)
-        db.update_balance(user_id, daily_amount)
-
+        # Claim the reward
+        amount = db.claim_daily(user_id)
         balance = db.get_balance(user_id)
-        await ctx.respond(f"✅ You claimed ${daily_amount}! Your new balance is ${balance}.", ephemeral=True)
+        await ctx.respond(
+            f"✅ You claimed your daily reward of ${amount}! Your new balance is ${balance}.", ephemeral=True
+        )
 
     @discord.slash_command(name="send_money", description="Send money to another user")
     async def send_money(self, ctx: discord.ApplicationContext, user: discord.User):
@@ -90,7 +90,7 @@ class SendMoneyModal(discord.ui.Modal):
             db.update_balance(self.recipient.id, amount)
 
             await interaction.response.send_message(
-                f"💸 {self.sender.mention} sent {amount} coins to {self.recipient.mention}!",
+                f"💸 {self.sender.mention} sent ${amount} to {self.recipient.mention}!",
                 ephemeral=False
             )
 
