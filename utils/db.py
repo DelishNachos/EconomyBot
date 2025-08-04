@@ -101,7 +101,7 @@ def claim_daily(user_id):
     return amount
 
 def get_today_reset_time_utc():
-    now = datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.timezone.utc)
     reset_time = now.replace(hour=17, minute=0, second=0, microsecond=0)
 
     # If current time is before today's reset time, adjust to yesterday's reset
