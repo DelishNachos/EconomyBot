@@ -49,9 +49,9 @@ class ChangeNameModal(discord.ui.Modal):
         self.horse = horse
 
         self.name_input = discord.ui.InputText(
-            label="New Horse Name",
+            label="New Horse Name (Max length 18 including spaces)",
             placeholder="Enter the new name for your horse",
-            max_length=50
+            max_length=18
         )
         self.add_item(self.name_input)
 
