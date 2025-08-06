@@ -7,6 +7,7 @@ from discord.ui import InputText
 import os
 import json
 from utils import db
+from utils import race_horse_manager
 from utils.race_horse_manager import select_random_race_horses
 from utils.track_generator import get_current_track_point
 from utils.image_generator import generate_race_gif
@@ -113,7 +114,7 @@ class HorseRacing(commands.Cog):
 
         await ctx.defer()
         
-        horses = select_random_race_horses()
+        horses = race_horse_manager.select_close_random_race_horses()
         track = db.get_random_race_track()
         track_length = track["track_steps"]
 
@@ -232,19 +233,41 @@ class HorseRacing(commands.Cog):
         # Generate race GIF
         gif_bytes = generate_race_gif(horses, positions_frames, track, track_length, duration=200)
 
+        embeds = []
+        files = []
         # Prepare embed for betting
-        embed = discord.Embed(
+        bet_embed = discord.Embed(
             title="🏇 Horse Race Starting!",
             description= f"Bet on a horse by clicking a button!\nTime left: {betting_time} seconds",
             color=discord.Color.gold()
         )
-        embed.add_field(name="---------------------------------", value="", inline=False)
-        embed.add_field(name="Track Length", value=track['length'], inline=True)
-        embed.add_field(name="Track Tags", value=db.get_track_tags_as_string(track), inline=True)
-        embed.add_field(name="---------------------------------", value="", inline=False)
+        bet_embed.add_field(name="---------------------------------", value="", inline=False)
+        bet_embed.add_field(name=f"Track: {track['name']}", value="", inline=False)
+        bet_embed.add_field(name="Track Length", value=track['length'], inline=True)
+        bet_embed.add_field(name="Track Tags", value=db.get_track_tags_as_string(track), inline=True)
+        bet_embed.add_field(name="---------------------------------", value="", inline=False)
+        embeds.append(bet_embed)
         for i, horse in enumerate(horses, 1):
-            stats = f"Speed: {horse['speed']}, Stamina: {horse['stamina']}, Agility: {horse['agility']}\nEnergy: {horse['energy']}%\nOdds: {odds[horse['id']]['decimal_odds']}x"
-            embed.add_field(name=f"Horse {i}: {horse['name']}", value=stats, inline=False)
+            # Extract filename from the stored image_url path
+            filename = os.path.basename(horse["image_url"]) if horse.get("image_url") else None
+            
+            if filename and os.path.exists(horse["image_url"]):
+                file = discord.File(horse["image_url"], filename=filename)
+            else:
+                file = discord.File(db.default_horse_image_path(), filename=filename)
+
+            horse_embed = discord.Embed(
+                title=f"Horse {i}: {horse['name']}",
+                color=discord.Color.gold()
+            )
+            horse_embed.add_field(name="Speed", value=horse['speed'], inline=True)
+            horse_embed.add_field(name="Stamina", value=horse['stamina'], inline=True)
+            horse_embed.add_field(name="Agility", value=horse['agility'], inline=True)
+            horse_embed.add_field(name="Energy", value=f"{horse['energy']}%")
+            horse_embed.add_field(name="Odds", value=f"{odds[horse['id']]['decimal_odds']}x")
+            horse_embed.set_thumbnail(url=f"attachment://{filename}")
+            embeds.append(horse_embed)
+            files.append(file)
 
         view = HorseRaceView(horses)
         self.current_race = {
@@ -260,13 +283,13 @@ class HorseRacing(commands.Cog):
 
         # Send betting message with buttons
         
-        message = await ctx.followup.send(embed=embed, view=view, ephemeral=is_ephemeral)
+        message = await ctx.followup.send(embeds=embeds, view=view, files=files, ephemeral=is_ephemeral)
 
         # Countdown & update embed description
         for seconds_left in range(betting_time - 1, -1, -1):
-            embed.description = f"Bet on a horse by clicking a button!\nTime left: {seconds_left} seconds"
+            embeds[0].description = f"Bet on a horse by clicking a button!\nTime left: {seconds_left} seconds"
             try:
-                await message.edit(embed=embed)
+                await message.edit(embeds=embeds)
             except Exception as e:
                 print(f"Failed to edit message: {e}")
             await asyncio.sleep(1)
@@ -313,7 +336,7 @@ class HorseRacing(commands.Cog):
             if horse_id == winning_horse_id:
                 payout = round(amount * odds[horse_id]["decimal_odds"])
                 update_balance(user_id, payout)
-                results.append(f"<@{user_id}> won ${payout}! 🤑")
+                results.append(f"<@{user_id}> won ${payout} (+${payout - amount})! 🤑")
                 total_house_cut += round(amount * odds[horse_id]["house_payout"])
             else:
                 results.append(f"<@{user_id}> lost ${amount}. 💸")
@@ -332,7 +355,11 @@ class HorseRacing(commands.Cog):
                     owner_id = horse['owner']
                     user_bet = bets.get(owner_id, {"horse_id": None, "amount": 0})
                     total_bet_amount -= user_bet['amount']
-                    amount = int(total_bet_amount * db.get_general_config()['user_horse_winning_multiplier'])
+
+                    decimal_odds = odds[horse['id']]['decimal_odds']
+                    scaling_factor = math.exp(0.8 * decimal_odds - 1) + 0.18
+                    bet_multiplier = min(.75, db.get_general_config()['user_horse_winning_multiplier'] * scaling_factor)
+                    amount = int(total_bet_amount * bet_multiplier)
                     db.add_money_to_user_saved(owner_id, amount)
 
             # if not horse['id'] == 'house':
