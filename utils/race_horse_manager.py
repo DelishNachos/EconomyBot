@@ -19,7 +19,7 @@ def select_close_random_race_horses(count=3):
     all_horses = db.load_all_horses()
 
     # Filter out house horses
-    user_horses = [h for h in all_horses if h["owner"] != "house"]
+    user_horses = [h for h in all_horses if h["owner"] != "house" and h['public'] == True]
     if not user_horses:
         return []
 
@@ -29,7 +29,7 @@ def select_close_random_race_horses(count=3):
     print(f"Horse 1: {selected_total}")
 
     # Step 2: Sort remaining horses by stat difference
-    remaining = [h for h in all_horses if h["id"] != selected[0]["id"]]
+    remaining = [h for h in all_horses if h["id"] != selected[0]["id"] and h['public'] == True]
     for _ in range(count - 1):
         # Sort by absolute stat difference
         sorted_by_diff = sorted(remaining, key=lambda h: abs(total_stats(h) - selected_total))
@@ -44,7 +44,7 @@ def select_close_random_race_horses(count=3):
             next_horse = sorted_by_diff[0]
 
         selected.append(next_horse)
-        remaining = [h for h in remaining if h["id"] != next_horse["id"]]
+        remaining = [h for h in remaining if h["id"] != next_horse["id"] and h['public'] == True]
         print(f"horse: {total_stats(next_horse)}")
 
     return selected
