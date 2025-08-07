@@ -138,7 +138,8 @@ class HorseRacing(commands.Cog):
         for h in horses:
             energy = h['energy'] / 100  # Normalize to 0–1
             energy = max(energy, 0.001)  # clamp low values
-            multiplier = 1 + math.log(energy + 0.01) * 0.1
+            #multiplier = 1 + math.log(energy + 0.01) * 0.1
+            multiplier = .2 + math.sqrt(.64 * energy)
             energy_multipliers[h["id"]] = max(0, multiplier)
 
 
