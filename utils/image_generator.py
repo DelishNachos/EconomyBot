@@ -20,63 +20,54 @@ ASSETS_PATH = BOT_DIR.parent / "HorseRacingBotData" / "Assets"
 
 
 
-def generate_race_frame(horses, positions, track, track_length, track_points):
+def generate_race_frame(horses, positions, track_img, track_length, track_points, horse_images):
     MARGIN = 80
 
-    
-
-    race_img = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(race_img)
-
-    track_img = load_track_image(track['id'], WIDTH, HEIGHT)
-    race_img.paste(track_img, (0,0))
-    # startx, starty = get_oval_position(0, WIDTH, HEIGHT, MARGIN)
-    # draw.line((startx, starty, startx + 50, starty), fill="red", width=20)
-
-
-
-    # Draw track (oval path)
-    # draw.ellipse(
-    #     [MARGIN, MARGIN, WIDTH - MARGIN, HEIGHT - MARGIN],
-    #     outline="green",
-    #     width=10
-    # )
-
-    font = ImageFont.truetype(FONT_PATH, 18) if os.path.exists(FONT_PATH) else None
+    # Copy preloaded track image so we don't modify the original
+    race_img = track_img.copy()
 
     for i, horse in enumerate(horses):
         progress = positions[horse["id"]] / track_length
-        #x, y = get_oval_position(progress, WIDTH, HEIGHT, MARGIN)
         x, y = get_horse_position(track_points, progress)
 
         x = int(x)
         y = int(y)
 
-        # Offset y per horse so they don't overlap
+        # Offset per horse so they don't overlap exactly
         y_offset = i * 10 - (len(horses) * 5)
         x_offset = i * 10 - (len(horses) * 5)
 
-        img = db.load_horse_image(horse['id'], HORSE_SIZE)
-        race_img.paste(img, (x + x_offset - HORSE_SIZE[0]//2, y + y_offset - HORSE_SIZE[1]//2), img)
-
-        if font:
-            draw.text((x + 30, y + y_offset), horse["name"], font=font, fill="black")
+        img = horse_images[horse['id']]
+        race_img.paste(
+            img,
+            (x + x_offset - HORSE_SIZE[0] // 2, y + y_offset - HORSE_SIZE[1] // 2),
+            img
+        )
 
     return race_img
 
+
 def generate_race_gif(horses, positions_frames, track, track_length, duration=200):
+    # Load static track image once
+    track_img = load_track_image(track['id'], WIDTH, HEIGHT)
+
+    # Load horse images once
+    horse_images = {
+        horse['id']: db.load_horse_image(horse['id'], HORSE_SIZE)
+        for horse in horses
+    }
+
+    # Load track path points once
     with open(DATA_PATH / "tracks" / f"{track['id']}.json") as f:
         raw_path = json.load(f)
 
     track_points = [tuple(point) for point in raw_path[0]]
-    scaled_track_points = track_points#scale_and_translate_path(track_points, (WIDTH, HEIGHT))
-    
-    # duration in ms per frame
+    scaled_track_points = track_points  # scaling disabled
+
     frames = []
     for positions in positions_frames:
-        frame = generate_race_frame(horses, positions, track, track_length, scaled_track_points)
-        frame = frame.convert("P", palette=Image.ADAPTIVE)
-        frames.append(frame.convert("RGB"))  # Convert to RGB to prevent alpha transparency issues
+        frame = generate_race_frame(horses, positions, track_img, track_length, scaled_track_points, horse_images)
+        frames.append(frame.convert("P", palette=Image.ADAPTIVE))
 
     gif_bytes = io.BytesIO()
     frames[0].save(
@@ -85,12 +76,14 @@ def generate_race_gif(horses, positions_frames, track, track_length, duration=20
         save_all=True,
         append_images=frames[1:],
         duration=duration,
-        loop=0
+        loop=0,
+        optimize=True
     )
     gif_bytes.seek(0)
 
     size_bytes = len(gif_bytes.getvalue())
     print(f"GIF size: {size_bytes} bytes ({size_bytes / (1024 * 1024):.2f} MB)")
+
     return gif_bytes
 
 def generate_slot_frames(grid):

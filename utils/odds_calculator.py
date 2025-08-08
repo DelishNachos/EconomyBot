@@ -20,12 +20,12 @@ def simulate_single_race(horses, track, track_data, corner_indices):
     positions_frames = []
 
     # Precompute energy multipliers
-    energy_multipliers = {}
-    for h in horses:
-        energy = 1  # Normalize to 0–1
-        energy = max(energy, 0.001)  # clamp low values
-        multiplier = 1 + math.log(energy + 0.01) * 0.1
-        energy_multipliers[h["id"]] = max(0, multiplier)
+    # energy_multipliers = {}
+    # for h in horses:
+    #     energy = 1  # Normalize to 0–1
+    #     energy = max(energy, 0.001)  # clamp low values
+    #     multiplier = 1 + math.log(energy + 0.01) * 0.1
+    #     energy_multipliers[h["id"]] = max(0, multiplier)
 
     steps = 0
     while max(positions.values()) < track_length or steps > 1000:
@@ -67,7 +67,7 @@ def simulate_single_race(horses, track, track_data, corner_indices):
             ) / 30
 
             # Apply permanent energy multiplier
-            chance *= energy_multipliers[horse_id]
+            #chance *= energy_multipliers[horse_id]
 
             # Apply randomness to chance for natural variation
             chance *= random.uniform(0.9, 1.1)
