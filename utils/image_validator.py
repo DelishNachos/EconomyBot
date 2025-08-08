@@ -12,7 +12,7 @@ async def validate_image(attachment):
     try:
         with Image.open(io.BytesIO(img_bytes)) as img:
             if img.width > MAX_DIMENSION or img.height > MAX_DIMENSION:
-                return False, "❌ Image dimensions must be 128x128 pixels or smaller."
+                return False, "❌ Image dimensions must be 256x256 pixels or smaller."
     except Exception:
         return False, "❌ Could not process image. Please upload a valid image file."
 

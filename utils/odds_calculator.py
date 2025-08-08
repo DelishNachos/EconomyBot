@@ -27,8 +27,9 @@ def simulate_single_race(horses, track, track_data, corner_indices):
         multiplier = 1 + math.log(energy + 0.01) * 0.1
         energy_multipliers[h["id"]] = max(0, multiplier)
 
-
-    while max(positions.values()) < track_length:
+    steps = 0
+    while max(positions.values()) < track_length or steps > 1000:
+        steps += 1
         for h in horses:
             horse_id = h["id"]
             progress = positions[horse_id]

@@ -107,7 +107,8 @@ class HorseRacing(commands.Cog):
         ctx
     ):
         is_ephemeral = False
-        
+        steps = 0
+
         if self.race_in_progress:
             await ctx.respond("🚫 A race is already in progress!", ephemeral=True)
             return
@@ -122,6 +123,7 @@ class HorseRacing(commands.Cog):
         corner_indices = track_data[-1].get("corner_indices", []) if isinstance(track_data[-1], dict) else []
 
         odds = calculate_odds_by_simulation(horses, track, track_data, corner_indices)
+        print("Calculated Odds")
 
         # Simulate entire race upfront
         positions = {h["id"]: 0 for h in horses}
@@ -143,7 +145,8 @@ class HorseRacing(commands.Cog):
             energy_multipliers[h["id"]] = max(0, multiplier)
 
 
-        while max(positions.values()) < track_length:
+        while max(positions.values()) < track_length or steps > 1000:
+            steps += 1
             for h in horses:
                 horse_id = h["id"]
                 progress = positions[horse_id]
@@ -233,6 +236,7 @@ class HorseRacing(commands.Cog):
 
         # Generate race GIF
         gif_bytes = generate_race_gif(horses, positions_frames, track, track_length, duration=200)
+        print("Created Gif")
 
         embeds = []
         files = []

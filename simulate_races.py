@@ -4,11 +4,12 @@ import os
 import random
 from collections import Counter
 from utils import db
+from utils import race_horse_manager
 from utils.race_horse_manager import select_random_race_horses
 from utils.track_generator import get_current_track_point
 
 # Load all track files
-NUM_SIMULATIONS = 1000
+NUM_SIMULATIONS = 1
 TRACK_ID = "marathon_horse_track"
 max_stat = 150
 max_stat_norm = max_stat / 10
@@ -20,6 +21,8 @@ def simulate_single_race(horses, track, track_data, corner_indices):
 
     race_energy = {h["id"]: 100 for h in horses}  # start full energy
 
+    steps = 0
+
     # Precompute energy multipliers
     energy_multipliers = {}
     for h in horses:
@@ -28,7 +31,8 @@ def simulate_single_race(horses, track, track_data, corner_indices):
         multiplier = 1 + math.log(energy + 0.01) * 0.1
         energy_multipliers[h["id"]] = max(0, multiplier)
 
-    while max(positions.values()) < track_length:
+    while max(positions.values()) < track_length or steps > 1000:
+        steps += 1
         for h in horses:
             horse_id = h["id"]
             progress = positions[horse_id]
@@ -110,6 +114,7 @@ def simulate_single_race(horses, track, track_data, corner_indices):
             if random.random() < chance:
                 positions[horse_id] += burst_steps
 
+    print(steps)
     return max(positions, key=positions.get)
 
 def main():
@@ -123,7 +128,7 @@ def main():
 
     print(track['name'])
 
-    horses = select_random_race_horses()
+    horses = race_horse_manager.select_close_random_race_horses()
 
     wins = Counter()
     for sim in range(NUM_SIMULATIONS):
