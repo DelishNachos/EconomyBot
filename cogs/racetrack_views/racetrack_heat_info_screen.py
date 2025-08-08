@@ -41,7 +41,8 @@ class EnterButton(discord.ui.Button):
             "horse": None,
             "track": db.get_random_race_track(),
             "caliber_info": self.caliber_info,
-            "in_progress": False
+            "in_progress": False,
+            "public": False
         }
 
         db.update_balance(interaction.user.id, -self.caliber_info['cost'])

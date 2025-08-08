@@ -213,11 +213,11 @@ def racetrack_results_screen(user_id, race_info, race_results):
         color=discord.Color.orange()
     )
     if did_win:
-        embed.title=f"Congrats, you won the {caliber_info['name']} race"
+        embed.title=f"Congrats, {race_info['horse']['name']} won the {caliber_info['name']} race"
         embed.description=f"You have won ${caliber_info['reward']}"
         embed.color=discord.Color.green()
     else:
-        embed.title=f"You lost the {caliber_info['name']} race"
+        embed.title=f"{race_info['horse']['name']} lost the {caliber_info['name']} race"
         embed.description=f"Better luck next time"
         embed.color=discord.Color.red()
 

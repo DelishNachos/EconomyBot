@@ -14,6 +14,7 @@ class RacetrackPreRaceView(discord.ui.View):
         if not race_info['in_progress']:
             self.add_item(StartRaceButton(race_info))
             self.add_item(SelectHorseButton(race_info))
+            self.add_item(PublicButton(race_info))
             self.add_item(LeaveRaceButton(race_info))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -28,7 +29,7 @@ class StartRaceButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         self.race_info['in_progress'] = True
-
+        is_ephemeral = not self.race_info['public']
         # Step 1: Show the pre-race screen
         response = racetrack_view_factory.racetrack_pre_race_screen(interaction.user.id, self.race_info)
         await interaction.response.edit_message(
@@ -40,8 +41,8 @@ class StartRaceButton(discord.ui.Button):
 
         # Step 2: Send temporary "Preparing your race..." message
         preparing_message = await interaction.followup.send(
-            content="⏳ Preparing your race...",
-            ephemeral=True,
+            content=f"⏳ Preparing {self.race_info['caliber_info']['name']} race for {self.race_info['horse']['name']}...",
+            ephemeral=is_ephemeral,
             wait=True
         )
 
@@ -72,7 +73,7 @@ class StartRaceButton(discord.ui.Button):
             content=result_response['content'],
             embed=result_response['embed'],
             view=racetrack_view_factory.get_racetrack_results_view(interaction.user.id),
-            ephemeral=True
+            ephemeral=is_ephemeral
         )
 
         
@@ -90,6 +91,27 @@ class SelectHorseButton(discord.ui.Button):
             view=response["view"],
             attachments=[]
         )
+
+class PublicButton(discord.ui.Button):
+    def __init__(self, race_info):
+        self.race_info = race_info
+        label = "Public: ON" if race_info['public'] else "Public: OFF"
+        style = discord.ButtonStyle.success if race_info['public'] else discord.ButtonStyle.danger
+        super().__init__(label=label, style=style)
+
+    async def callback(self, interaction: discord.Interaction):
+        current_value = self.race_info["public"]
+        self.race_info["public"] = not current_value
+
+        response = racetrack_view_factory.racetrack_pre_race_screen(interaction.user.id, self.race_info)
+        await interaction.response.edit_message(
+            content=response["content"],
+            embed=response["embed"],
+            view=response["view"],
+            attachments=[]
+        )
+
+
 
 class LeaveRaceButton(discord.ui.Button):
     def __init__(self, race_info):
