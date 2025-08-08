@@ -409,7 +409,7 @@ def update_stable_data(user_id, stable_data):
 def upgrade_stable_data(user_id):
     user = get_user(user_id)
     stored_level = user['stables']['level']
-    cost = get_stable_level_data(stored_level)['cost']
+    cost = get_stable_level_data(stored_level + 1)['cost']
     user['stables']['level'] += 1
     update_user(user)
     update_balance(user_id, -cost)
