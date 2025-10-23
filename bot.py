@@ -13,7 +13,7 @@ if os.path.exists('.env'):
 #     load_dotenv('.env.production')
 
 TOKEN = os.getenv("DISCORD_TOKEN")
-GUILD_ID = int(os.getenv("DISCORD_GUILD_ID"))
+GUILD_IDS = [int(id) for id in os.getenv("DISCORD_GUILD_IDS").split(",")]
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -23,7 +23,7 @@ db.GLOBAL_BOT = bot
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
-    await bot.sync_commands()
+    await bot.sync_commands(guild_ids=GUILD_IDS)
 
 # Load all cogs
 for extension in ["cogs.economy", "cogs.horserace", "cogs.stable_manager", "cogs.shop_manager", "cogs.racetrack_manager", "cogs.daily_horse_refresh", "cogs.bank_manager", "cogs.help"]:
