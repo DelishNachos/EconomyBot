@@ -9,13 +9,13 @@ class Economy(commands.Cog):
         self.bot = bot
         self.table_name = os.getenv("DYNAMODB_TABLE_NAME")
 
-    @discord.slash_command(guild_ids=[int(os.getenv("DISCORD_GUILD_ID"))])
+    @discord.slash_command(guild_ids=[int(id) for id in os.getenv("DISCORD_GUILD_ID").split(",")])
     async def balance(self, ctx):
         user_id = str(ctx.author.id)
         balance = db.get_balance(user_id)
         await ctx.respond(f"💸 You have ${balance}.", ephemeral=True)
 
-    @discord.slash_command(guild_ids=[int(os.getenv("DISCORD_GUILD_ID"))])
+    @discord.slash_command(guild_ids=[int(id) for id in os.getenv("DISCORD_GUILD_ID").split(",")])
     async def daily(self, ctx):
         user_id = str(ctx.author.id)
         user = db.get_user(user_id)
