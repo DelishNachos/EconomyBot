@@ -23,7 +23,7 @@ db.GLOBAL_BOT = bot
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
-    await bot.sync_commands(guild_ids=[GUILD_ID])
+    await bot.sync_commands()
 
 # Load all cogs
 for extension in ["cogs.economy", "cogs.horserace", "cogs.stable_manager", "cogs.shop_manager", "cogs.racetrack_manager", "cogs.daily_horse_refresh", "cogs.bank_manager", "cogs.help"]:
