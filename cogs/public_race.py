@@ -83,5 +83,5 @@ class HorseRacing(commands.Cog):
         self.race_in_progress = False
         self.current_race = None
 
-    @discord.slash_command(name="startrace", description="Start a new horse race", guild_ids=[int(os.getenv("DISCORD_GUILD_ID"))])
+    @discord.slash_command(name="startrace", description="Start a new horse race", guild_ids=[int(id) for id in os.getenv("DISCORD_GUILD_ID").split(",")])
     async def startrace(self, ctx):

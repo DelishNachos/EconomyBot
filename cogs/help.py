@@ -8,7 +8,7 @@ class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @discord.slash_command(name="help", description="Link to the help guide", guild_ids=[int(os.getenv("DISCORD_GUILD_ID"))])
+    @discord.slash_command(name="help", description="Link to the help guide", guild_ids=[int(id) for id in os.getenv("DISCORD_GUILD_ID").split(",")])
     async def balance(self, ctx):
         embed = discord.Embed(
             title="📘 Horse Racing Bot Help",
