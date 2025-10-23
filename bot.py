@@ -13,7 +13,7 @@ if os.path.exists('.env'):
 #     load_dotenv('.env.production')
 
 TOKEN = os.getenv("DISCORD_TOKEN")
-GUILD_IDS = [int(id) for id in os.getenv("DISCORD_GUILD_IDS").split(",")]
+GUILD_IDS = [int(id) for id in os.getenv("DISCORD_GUILD_ID").split(",")]
 
 intents = discord.Intents.default()
 intents.message_content = True
